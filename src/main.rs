@@ -55,12 +55,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("\nYou need to have OPENAI_API_KEY present in your env.\n");
     let args = Args::parse();
 
-    if std::path::Path::new(&args.output_file).exists() {
-        log::error!(
-            "Output file already exists. Please provide a different file name.\nFile: {}",
-            &args.output_file
-        );
-        return Err("Output file already exists.".into());
+    match std::path::Path::new(&args.output_file).try_exists() {
+        Ok(true) => (),
+        Ok(false) => {
+            log::error!(
+                "Output file already exists. Please provide a different file name.\nFile: {}",
+                &args.output_file
+            );
+            return Err("Output file already exists.".into());
+        }
+        Err(e) => {
+            log::error!("Could not check if the output file exists this likely means that the file path is invalid.
+
+                        Exact Error for debugging:
+                        {}", e);
+            return Err("Could not check if the output file exists.".into());
+        }
     };
 
     match args.command {
@@ -82,7 +92,6 @@ async fn listen(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
     let api_url = "https://api.openai.com/v1/audio/transcriptions";
-    let mut dest = std::fs::File::create(output_file)?;
 
     let audio_file: tokio::fs::File = match tokio::fs::File::open(input_file).await {
         Ok(f) => f,
@@ -118,6 +127,8 @@ async fn listen(
         return Err("Error from OpenAI's API".into());
     }
     let content = response.bytes().await?;
+
+    let mut dest = std::fs::File::create(output_file)?;
     copy(&mut content.as_ref(), &mut dest)?;
     log::info!("Successfully saved the text to: {}", output_file);
     Ok(())
@@ -163,4 +174,3 @@ async fn tts(
     log::info!("Successfully saved the audio to: {}", output_file);
     Ok(())
 }
-
