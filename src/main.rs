@@ -45,6 +45,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("\nYou need to have OPENAI_API_KEY present in your env.\n");
     let args = Args::parse();
 
+    if std::path::Path::new(&args.output_file).exists() {
+        log::error!(
+            "Output file already exists. Please provide a different file name.\nFile: {}",
+            &args.output_file
+        );
+        return Err("Output file already exists.".into());
+    }
+
     let mut dest = std::fs::File::create(&args.output_file)?;
     let input = std::fs::read_to_string(&args.input_file)?;
 
