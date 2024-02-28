@@ -1,4 +1,4 @@
-use env_logger;
+use env_logger::Env;
 use log;
 use reqwest::Client;
 use serde::Serialize;
@@ -38,7 +38,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let client = Client::new();
     let api_url = "https://api.openai.com/v1/audio/speech";
     let api_key = std::env::var("OPENAI_API_KEY")
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let status = response.status();
     log::info!("Response status: {}", status);
-    if (status.is_client_error() || status.is_server_error()) {
+    if status.is_client_error() || status.is_server_error() {
         let error = response.text().await?;
         log::error!("Error: {}", error);
         return Err("Error from OpenAI's API".into());
