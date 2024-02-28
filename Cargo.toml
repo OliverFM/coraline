@@ -3,16 +3,14 @@ name = "coraline"
 version = "0.2.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
+clap = { version = "4.5.1", features = ["derive"] }
+env_logger = "0.11.2"
+log = "0.4.20"
+reqwest = { version = "0.11", features = ["json", "stream","multipart"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-clap = { version = "4.5.1", features = ["derive"] }
-log = "0.4.20"
-env_logger = "0.11.2"
+tokio = { version = "1", features = ["full"] }
 
 
 [target.x86_64-pc-windows-gnu]
