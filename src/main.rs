@@ -45,10 +45,7 @@ enum Commands {
     },
 
     #[clap(alias("speech-to-text"))]
-    Listen {
-        #[arg(long, value_enum, default_value_t=Voice::Alloy, help = "The voice to use.")]
-        voice: Voice,
-    },
+    Listen,
 }
 
 #[tokio::main]
@@ -70,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Speak { voice } => {
             tts(voice, &args.input_file, &args.output_file, &api_key).await?;
         }
-        Commands::Listen { voice } => {
+        Commands::Listen => {
             listen(&args.input_file, &args.output_file, &api_key).await?;
         }
     }
@@ -95,18 +92,20 @@ async fn listen(
         }
     };
 
+    let mime_type = mime_guess::from_path(input_file).first_or_octet_stream();
     let form = reqwest::multipart::Form::new()
         .text("model", "whisper-1")
         .part(
             "file",
-            reqwest::multipart::Part::stream(audio_file).file_name("file"),
+            reqwest::multipart::Part::stream(audio_file)
+                .file_name("file")
+                .mime_str(&mime_type.to_string())?,
         )
         .text("model", "whisper-1");
     log::info!("Sending request to OpenAI's API...");
     let response = client
         .post(api_url)
         .header("Authorization", format!("Bearer {}", api_key))
-        // .header("Content-Type", "multipart/form-data")
         .multipart(form)
         .send()
         .await?;
