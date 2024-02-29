@@ -104,6 +104,7 @@ async fn listen(
     let mime_type = mime_guess::from_path(input_file).first_or_octet_stream();
     let form = reqwest::multipart::Form::new()
         .text("model", "whisper-1")
+        .text("response_format", "text")
         .part(
             "file",
             reqwest::multipart::Part::stream(audio_file)
@@ -173,4 +174,25 @@ async fn tts(
     copy(&mut content.as_ref(), &mut dest)?;
     log::info!("Successfully saved the audio to: {}", output_file);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_composition() {
+        let api_key = &std::env::var("OPENAI_API_KEY").unwrap();
+        tts(Voice::Alloy, "sample.txt", "intermediate.mp3", api_key)
+            .await
+            .unwrap();
+        listen("intermediate.mp3", "testing_output.txt", api_key)
+            .await
+            .unwrap();
+        std::fs::remove_file("intermediate.mp3").unwrap();
+        let input_string = std::fs::read_to_string("sample.txt").unwrap();
+        let converted_string = std::fs::read_to_string("testing_output.txt").unwrap();
+        assert_eq!(input_string, converted_string);
+        std::fs::remove_file("testing_output.txt").unwrap();
+    }
 }
