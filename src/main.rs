@@ -19,7 +19,7 @@ struct Args {
         long,
         help = "The path to the file that you would like coraline to read"
     )]
-    input_file: String,
+    input_file: Option<String>,
 
     #[arg(short, long, help = "Path to the save the output audio.")]
     output_file: String,
@@ -31,6 +31,10 @@ enum Commands {
     Speak {
         #[arg(long, value_enum, default_value_t=Voice::Alloy, help = "The voice to use.")]
         voice: Voice,
+
+        // #[clap(required_unless_present = "input_file")]
+        #[arg(help = "the raw text to be read; can only be used if input_file is not provided")]
+        text: Option<String>,
     },
 
     #[clap(alias("speech-to-text"))]
@@ -43,10 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = std::env::var("OPENAI_API_KEY")
         .expect("\nYou need to have OPENAI_API_KEY present in your env.\n");
     let args = Args::parse();
+    log::debug!("{:?}", &args);
 
-    match std::path::Path::new(&args.output_file).try_exists() {
-        Ok(true) => (),
-        Ok(false) => {
+    let output_path = std::path::Path::new(&args.output_file);
+    match output_path.try_exists() {
+        Ok(false) => (),
+        Ok(true) => {
             log::error!(
                 "Output file already exists. Please provide a different file name.\nFile: {}",
                 &args.output_file
@@ -63,12 +69,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match args.command {
-        Commands::Speak { voice } => {
-            tts(voice, &args.input_file, &args.output_file, &api_key).await?;
+        Commands::Speak { voice, text } => {
+            match (args.input_file, text) {
+                (Some(input_file), None) => {
+                    tts(voice, &input_file, &args.output_file, &api_key).await?;
+                }
+                (None, Some(to_read)) => {
+                    log::debug!("Reading the text: {}", to_read);
+                    tts(voice, &to_read, &args.output_file, &api_key).await?;
+                }
+                (_, _) => {
+                    log::error!("You need to provide a file to read or a text to read.");
+                    return Err("You need to provide a file to read or a text to read.".into());
+                }
+            }
+            // tts(voice, &args.input_file, &args.output_file, &api_key).await?;
         }
-        Commands::Listen => {
-            listen::listen(&args.input_file, &args.output_file, &api_key).await?;
-        }
+        Commands::Listen => match args.input_file {
+            Some(input_file) => {
+                listen::listen(&input_file, &args.output_file, &api_key).await?;
+            }
+            None => {
+                log::error!("You need to provide a file to read or a text to read.");
+                return Err("You need to provide a file to read or a text to read.".into());
+            }
+        },
     }
 
     Ok(())
@@ -78,7 +103,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
 
+    // ignore the test since it requires an API key
     #[tokio::test]
+    #[ignore]
     async fn test_composition() {
         let api_key = &std::env::var("OPENAI_API_KEY").unwrap();
         tts(Voice::Alloy, "sample.txt", "intermediate.mp3", api_key)

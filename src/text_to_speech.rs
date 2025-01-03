@@ -1,27 +1,24 @@
-
-
 use log;
 use reqwest::Client;
 use serde::Serialize;
 use serde_json::json;
 use std::io::copy;
 
-
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Voice {
-    #[default]
     Alloy,
     Echo,
     Fable,
     Onyx,
+    #[default]
     Nova,
     Shimmer,
 }
 
 pub async fn tts(
     voice: Voice,
-    input_file: &str,
+    input_file: &str, // TODO: instead take in a string only
     output_file: &str,
     api_key: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
