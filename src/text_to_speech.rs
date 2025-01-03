@@ -7,11 +7,11 @@ use std::io::copy;
 #[derive(clap::ValueEnum, Clone, Default, Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Voice {
-    #[default]
     Alloy,
     Echo,
     Fable,
     Onyx,
+    #[default]
     Nova,
     Shimmer,
 }

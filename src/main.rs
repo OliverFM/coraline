@@ -49,9 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     log::debug!("{:?}", &args);
 
-    match std::path::Path::new(&args.output_file).try_exists() {
-        Ok(true) => (),
-        Ok(false) => {
+    let output_path = std::path::Path::new(&args.output_file);
+    match output_path.try_exists() {
+        Ok(false) => (),
+        Ok(true) => {
             log::error!(
                 "Output file already exists. Please provide a different file name.\nFile: {}",
                 &args.output_file
@@ -102,7 +103,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
 
+    // ignore the test since it requires an API key
     #[tokio::test]
+    #[ignore]
     async fn test_composition() {
         let api_key = &std::env::var("OPENAI_API_KEY").unwrap();
         tts(Voice::Alloy, "sample.txt", "intermediate.mp3", api_key)
