@@ -45,8 +45,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     match std::path::Path::new(&args.output_file).try_exists() {
-        Ok(true) => (),
-        Ok(false) => {
+        Ok(false) => (),
+        Ok(true) => {
             log::error!(
                 "Output file already exists. Please provide a different file name.\nFile: {}",
                 &args.output_file
