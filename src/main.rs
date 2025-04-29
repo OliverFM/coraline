@@ -1,6 +1,9 @@
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 use log;
+use rodio::{Decoder, OutputStream, Sink};
+use std::fs::File;
+use std::io::BufReader;
 use tokio;
 
 mod listen;
@@ -23,6 +26,13 @@ struct Args {
 
     #[arg(short, long, help = "Path to the save the output audio.")]
     output_file: String,
+
+    #[arg(
+        short,
+        long,
+        help = "Play the spoken audio output immediately after it is generated."
+    )]
+    play: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -35,6 +45,18 @@ enum Commands {
 
     #[clap(alias("speech-to-text"))]
     Listen,
+}
+
+fn play_audio(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let (_stream, stream_handle) = OutputStream::try_default()?;
+    let sink = Sink::try_new(&stream_handle)?;
+
+    let file = BufReader::new(File::open(file_path)?);
+    let source = Decoder::new(file)?;
+    sink.append(source);
+
+    sink.sleep_until_end();
+    Ok(())
 }
 
 #[tokio::main]
@@ -65,8 +87,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
         Commands::Speak { voice } => {
             tts(voice, &args.input_file, &args.output_file, &api_key).await?;
+
+            if args.play {
+                play_audio(&args.output_file)?;
+            }
         }
         Commands::Listen => {
+            if args.play {
+                return Err("--play is not supported for listen.".into());
+            }
+
             listen::listen(&args.input_file, &args.output_file, &api_key).await?;
         }
     }
